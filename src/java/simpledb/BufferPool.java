@@ -1,8 +1,15 @@
 package simpledb;
 
-import java.io.*;
+import javafx.util.Pair;
+import org.apache.log4j.Logger;
 
-import java.util.concurrent.ConcurrentHashMap;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -16,6 +23,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * @Threadsafe, all fields are final
  */
 public class BufferPool {
+    private static Logger LOG = Logger.getLogger(BufferPool.class);
+
+    private ArrayList<Page> pageBuffer;
+
     /** Bytes per page, including header. */
     private static final int DEFAULT_PAGE_SIZE = 4096;
 
@@ -33,6 +44,7 @@ public class BufferPool {
      */
     public BufferPool(int numPages) {
         // some code goes here
+        pageBuffer = new ArrayList<Page>();
     }
     
     public static int getPageSize() {
@@ -64,10 +76,23 @@ public class BufferPool {
      * @param pid the ID of the requested page
      * @param perm the requested permissions on the page
      */
-    public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
+    public Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
         // some code goes here
-        return null;
+        Page ret = null;
+
+        for (Iterator<Page> iterator = pageBuffer.iterator(); iterator.hasNext();) {
+            Page aPage = iterator.next();
+            if (aPage.getId().equals(pid)) {
+                ret = aPage;
+                break;
+            }
+        }
+        if (ret == null) {
+            ret = Database.getCatalog().getDatabaseFile(pid.getTableId()).readPage(pid);
+            pageBuffer.add(ret);
+        }
+        return ret;
     }
 
     /**
